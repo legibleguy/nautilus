@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  #Adjust PAWPRINT HERE
+  name: askvy-ue
+spec:
+  restartPolicy: Never
+  imagePullSecrets:
+    - name: dockerconfigjson-github-com
+  containers:
+    #Adjust PAWPRINT HERE
+    - name: askvy-ue
+      image: ghcr.io/legibleguy/mizsim:latest
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          yq eval '.ros.use_docker = false' config.yml -i
+          yq eval '.airsim.use_docker = false' config.yml -i
+          yq eval '.unreal.use_docker = false' config.yml -i
+          yq eval '.unreal.user = "ue4"' config.yml -i
+          yq eval '.unreal.local_path = "/home/ue4/UnrealEngine"' config.yml -i
+          yq eval '.unreal.project_path = "/Colosseum/Unreal/Environments/Blocks"' config.yml -i
+          sed -i '1s/^tmux attach-session -t $SESSIONNAME:ROS/#&/' run.sh
+          ./run.sh config.yml
+          sleep infinity
+      resources:
+        limits:
+          memory: 8Gi
+          cpu: 4
+          nvidia.com/gpu: 1 # Request 1 GPU
+        requests:
+          memory: 8Gi
+          cpu: 4
+          nvidia.com/gpu: 1 # Request 1 GPU
+      volumeMounts:
+        - mountPath: /workspace/unreal
+          name: ue-workspace
+  volumes:
+    - name: ue-workspace
+      persistentVolumeClaim:
+        claimName: askvyue-workspace
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nvidia.com/gpu.present # Check if GPU is present on the node
+                operator: Exists
+            matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                  - NVIDIA-GeForce-RTX-3090
+                  - NVIDIA-TITAN-RTX
+                  - NVIDIA-RTX-A5000
+                  - Quadro-RTX-6000
+                  - NVIDIA-A10
