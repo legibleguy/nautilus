@@ -10,18 +10,17 @@ spec:
   containers:
     #Adjust PAWPRINT HERE
     - name: askvy-ue
-      image: ghcr.io/legibleguy/mizsim:latest
+      image: ghcr.io/legibleguy/mizsim:ue5.3-u20.04
       command: ["/bin/bash", "-c"]
       args:
         - |
-          yq eval '.ros.use_docker = false' config.yml -i
-          yq eval '.airsim.use_docker = false' config.yml -i
-          yq eval '.unreal.use_docker = false' config.yml -i
-          yq eval '.unreal.user = "ue4"' config.yml -i
-          yq eval '.unreal.local_path = "/home/ue4/UnrealEngine"' config.yml -i
-          yq eval '.unreal.project_path = "/Colosseum/Unreal/Environments/Blocks"' config.yml -i
-          sed -i '1s/^tmux attach-session -t $SESSIONNAME:ROS/#&/' run.sh
-          ./run.sh config.yml
+          cd ../
+          git clone https://github.com/legibleguy/airsim-blocks.git
+          mv airsim-blocks Blocks
+          cd HeadlessUnrealFlightAgent
+          git pull
+          yq eval '.unreal.project_path = "/home/ue4/Blocks"' docker-config.yml -i
+          ./run.sh docker-config.yml
           sleep infinity
       resources:
         limits:
